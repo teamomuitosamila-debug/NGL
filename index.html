@@ -1,0 +1,264 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pergunta+ | Mensagens</title>
+<style>
+*{box-sizing:border-box}
+body{
+ margin:0;
+ font-family:Arial,sans-serif;
+ background:#100d1d;
+ color:white;
+ padding:20px;
+}
+.container{
+ max-width:450px;
+ margin:auto;
+}
+h1{
+ text-align:center;
+ color:#e879f9;
+ font-size:35px;
+}
+.card{
+ background:#211b35;
+ padding:20px;
+ border-radius:18px;
+ margin-top:18px;
+}
+input,textarea{
+ width:100%;
+ padding:14px;
+ margin:8px 0;
+ border:1px solid #59446f;
+ border-radius:10px;
+ background:#151124;
+ color:white;
+}
+textarea{height:110px}
+button{
+ width:100%;
+ padding:14px;
+ margin-top:10px;
+ border:0;
+ border-radius:10px;
+ background:linear-gradient(90deg,#e879f9,#8b5cf6);
+ color:white;
+ font-weight:bold;
+ cursor:pointer;
+}
+button.secondary{background:#403453}
+.hidden{display:none}
+.message{
+ background:#302443;
+ border-radius:12px;
+ padding:14px;
+ margin-top:12px;
+ overflow-wrap:anywhere;
+}
+.profile{
+ display:flex;
+ align-items:center;
+ gap:12px;
+}
+.avatar{
+ width:48px;
+ height:48px;
+ border-radius:50%;
+ object-fit:cover;
+ background:#59446f;
+}
+small{color:#c4b5d9}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PERGUNTA+</h1>
+<p style="text-align:center;color:#c4b5d9">
+Mensagens e confissões
+</p>
+
+<div class="card" id="cadastro">
+<h2>Criar conta</h2>
+<input id="nome" placeholder="Seu nome">
+<input id="usuario" placeholder="Seu usuário">
+<input id="foto" placeholder="Link da sua foto (opcional)">
+<input id="senha" type="password" placeholder="Sua senha">
+<button onclick="cadastrar()">Cadastrar</button>
+</div>
+
+<div class="card hidden" id="painel">
+<h2>Meu perfil</h2>
+<div class="profile">
+<img id="minhaFoto" class="avatar">
+<div>
+<b id="meuNome"></b><br>
+<small id="meuUsuario"></small>
+</div>
+</div>
+
+<h3>Meu link</h3>
+<input id="meuLink" readonly>
+<button onclick="copiarLink()">Copiar link</button>
+
+<h2>Mensagens recebidas</h2>
+<div id="mensagens"></div>
+<button class="secondary" onclick="sair()">Sair</button>
+</div>
+
+<div class="card hidden" id="enviar">
+<h2>Enviar mensagem 👀</h2>
+<p id="destino"></p>
+<input id="remetente" placeholder="Seu nome">
+<input id="fotoRemetente" placeholder="Link da sua foto (opcional)">
+<textarea id="texto" placeholder="Escreva sua mensagem..."></textarea>
+<button onclick="enviarMensagem()">Enviar mensagem</button>
+</div>
+
+</div>
+
+<script>
+let conta=null;
+
+function cadastrar(){
+ const nome=document.getElementById("nome").value.trim();
+ const usuario=document.getElementById("usuario").value.trim();
+ const foto=document.getElementById("foto").value.trim();
+ const senha=document.getElementById("senha").value;
+
+ if(!nome||!usuario||!senha){
+  alert("Preencha todos os campos!");
+  return;
+ }
+
+ if(localStorage.getItem("conta_"+usuario)){
+  alert("Usuário já existe!");
+  return;
+ }
+
+ conta={nome,usuario,foto,senha};
+ localStorage.setItem("conta_"+usuario,JSON.stringify(conta));
+ abrirPainel();
+}
+
+function abrirPainel(){
+ document.getElementById("cadastro").classList.add("hidden");
+ document.getElementById("painel").classList.remove("hidden");
+
+ document.getElementById("meuNome").textContent=conta.nome;
+ document.getElementById("meuUsuario").textContent="@"+conta.usuario;
+ document.getElementById("minhaFoto").src=
+ conta.foto||"https://placehold.co/100x100";
+
+ const link=location.href.split("?")[0]+"?perfil="+conta.usuario;
+ document.getElementById("meuLink").value=link;
+ carregarMensagens();
+}
+
+function copiarLink(){
+ navigator.clipboard.writeText(
+ document.getElementById("meuLink").value
+ ).then(()=>alert("Link copiado!"))
+ .catch(()=>alert("Copie o link manualmente."));
+}
+
+function enviarMensagem(){
+ const nome=document.getElementById("remetente").value.trim();
+ const foto=document.getElementById("fotoRemetente").value.trim();
+ const texto=document.getElementById("texto").value.trim();
+
+ if(!nome||!texto){
+  alert("Preencha seu nome e a mensagem!");
+  return;
+ }
+
+ const usuario=new URLSearchParams(location.search).get("perfil");
+ const lista=JSON.parse(
+ localStorage.getItem("mensagens_"+usuario)||"[]"
+ );
+
+ lista.push({
+ nome:nome,
+ foto:foto,
+ texto:texto,
+ data:new Date().toLocaleString("pt-BR")
+ });
+
+ localStorage.setItem("mensagens_"+usuario,JSON.stringify(lista));
+ alert("Mensagem enviada!");
+ document.getElementById("texto").value="";
+}
+
+function carregarMensagens(){
+ const lista=JSON.parse(
+ localStorage.getItem("mensagens_"+conta.usuario)||"[]"
+ );
+
+ const area=document.getElementById("mensagens");
+ area.innerHTML="";
+
+ if(!lista.length){
+  area.textContent="Nenhuma mensagem recebida.";
+  return;
+ }
+
+ lista.forEach((m,i)=>{
+  const div=document.createElement("div");
+  div.className="message";
+
+  const img=document.createElement("img");
+  img.className="avatar";
+  img.src=m.foto||"https://placehold.co/100x100";
+  img.alt="Foto do remetente";
+
+  const nome=document.createElement("b");
+  nome.textContent=m.nome;
+
+  const texto=document.createElement("p");
+  texto.textContent=m.texto;
+
+  const data=document.createElement("small");
+  data.textContent=m.data;
+
+  const apagar=document.createElement("button");
+  apagar.textContent="Excluir";
+  apagar.onclick=()=>{
+   lista.splice(i,1);
+   localStorage.setItem(
+    "mensagens_"+conta.usuario,
+    JSON.stringify(lista)
+   );
+   carregarMensagens();
+  };
+
+  div.append(img,nome,texto,data,apagar);
+  area.appendChild(div);
+ });
+}
+
+function sair(){
+ conta=null;
+ location.href=location.pathname;
+}
+
+const perfil=new URLSearchParams(location.search).get("perfil");
+
+if(perfil){
+ document.getElementById("cadastro").classList.add("hidden");
+ document.getElementById("enviar").classList.remove("hidden");
+ document.getElementById("destino").textContent=
+ "Enviando para @"+perfil;
+}else{
+ const salvo=localStorage.getItem("usuario_logado");
+ if(salvo){
+  conta=JSON.parse(localStorage.getItem("conta_"+salvo));
+  if(conta)abrirPainel();
+ }
+}
+</script>
+</body>
+</html>
